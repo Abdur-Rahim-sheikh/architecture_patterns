@@ -2,6 +2,10 @@ from datetime import date
 from dataclasses import dataclass
 
 
+class OutOfStock(Exception):
+    pass
+
+
 @dataclass(frozen=True)
 class OrderLine:
     orderid: str
@@ -26,7 +30,7 @@ class Batch:
         return self.eta > other.eta
 
     def can_allocate(self, line: OrderLine) -> bool:
-        return self.sku == line.sku and self._purchased_quantity >= line.qty
+        return self.sku == line.sku and self.available_quantity >= line.qty
 
     def allocate(self, line: OrderLine):
         if self.can_allocate(line):
@@ -48,6 +52,9 @@ class Batch:
 
 
 def allocate(line: OrderLine, batches: list[Batch]) -> str:
-    batch = next(b for b in sorted(batches) if b.can_allocate(line))
+    try:
+        batch = next(b for b in sorted(batches) if b.can_allocate(line))
+    except StopIteration:
+        raise OutOfStock(f"Out of stock for sku {line.sku}")
     batch.allocate(line)
     return batch.reference
