@@ -18,6 +18,13 @@ class Batch:
         self._allocated = set()
         self._total_allocated = 0
 
+    def __gt__(self, other: "Batch"):
+        if self.eta is None:
+            return False
+        if other.eta is None:
+            return True
+        return self.eta > other.eta
+
     def can_allocate(self, line: OrderLine) -> bool:
         return self.sku == line.sku and self._purchased_quantity >= line.qty
 
@@ -38,3 +45,9 @@ class Batch:
     @property
     def available_quantity(self) -> int:
         return self._purchased_quantity - self._total_allocated
+
+
+def allocate(line: OrderLine, batches: list[Batch]) -> str:
+    batch = next(b for b in sorted(batches) if b.can_allocate(line))
+    batch.allocate(line)
+    return batch.reference
