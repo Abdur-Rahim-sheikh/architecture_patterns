@@ -1,6 +1,8 @@
-def main():
-    print("Hello from architecture-patterns!")
+from fastapi import FastAPI
+
+app = FastAPI()
 
 
-if __name__ == "__main__":
-    main()
+@app.get("/allocate")
+def allocate_endpoint():
+    pass
