@@ -4,7 +4,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .config import get_postgres_uri
-from .models import Batch, OrderLine, allocate
+from .models import Batch, OrderLine
+from .service import allocate
 from .orm import start_mappers
 from .repository import SqlAlchemyRepository
 
@@ -25,14 +26,9 @@ async def allocate_endpoint(
     batches = SqlAlchemyRepository(session).list()
     line = OrderLine(orderid, sku, qty)
 
-    if not is_valid_sku(line.sku, batches):
-        return JSONResponse(
-            content={"message": f"Invalid sku {line.sku}"}, status_code=400
-        )
     try:
-        batchref = allocate(line=line, batches=batches)
+        batchref = allocate(line=line, batches=batches, session=session)
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=400)
 
-    session.commit()
     return JSONResponse(status_code=201, content={"batchref": batchref})
