@@ -23,11 +23,11 @@ async def allocate_endpoint(
     orderid: str = Body(...), sku: str = Body(...), qty: int = Body(...)
 ):
     session = get_session()
-    batches = SqlAlchemyRepository(session).list()
+    repo = SqlAlchemyRepository(session)
     line = OrderLine(orderid, sku, qty)
 
     try:
-        batchref = allocate(line=line, batches=batches, session=session)
+        batchref = allocate(line=line, repo=repo, session=session)
     except Exception as e:
         return JSONResponse(content={"message": str(e)}, status_code=400)
 
