@@ -12,11 +12,11 @@ class FakeSession:
 
 
 def test_returns_allocation():
-    line = OrderLine("o1", "COMPLICATED-LAMP", 10)
-    batch = Batch("b1", "COMPLICATED-LAMP", 100, eta=None)
-    repo = FakeRepository([batch])
+    # line = OrderLine("o1", "COMPLICATED-LAMP", 10)
 
-    result = allocate(line, repo, FakeSession())
+    repo = FakeRepository.for_batch("b1", "COMPLICATED-LAMP", 100, eta=None)
+
+    result = allocate("o1", "COMPLICATED-LAMP", 10, repo, FakeSession())
     assert result == "b1"
 
 
