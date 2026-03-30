@@ -1,15 +1,15 @@
 import datetime
 
-from fastapi import Body, FastAPI
+from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from .adapters.orm import start_mappers
+from .adapters.repository import SqlAlchemyRepository
 from .config import get_postgres_uri
-from .models import Batch, OrderLine
-from .orm import start_mappers
-from .repository import SqlAlchemyRepository
-from .service import add_batch, allocate
+from .domain.models import Batch
+from .service_layer.service import add_batch, allocate
 
 start_mappers()
 get_session = sessionmaker(bind=create_engine(get_postgres_uri()))
@@ -26,13 +26,12 @@ async def allocate_endpoint(
 ):
     session = get_session()
     repo = SqlAlchemyRepository(session)
-    line = OrderLine(orderid, sku, qty)
 
     try:
-        batchref = allocate(line=line, repo=repo, session=session)
+        batchref = allocate(orderid, sku, qty, repo=repo, session=session)
     except Exception as e:
-        return JSONResponse(content={"message": str(e)}, status_code=400)
-
+        # return JSONResponse(content={"message": str(e)}, status_code=400)
+        raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse(status_code=201, content={"batchref": batchref})
 
 
@@ -41,10 +40,10 @@ def add_batch_endpoint(
     ref: str = Body(...),
     sku: str = Body(...),
     qty: int = Body(...),
-    eta: datetime.date | None = Body(...),
+    eta: datetime.date | None = Body(None),
 ):
     session = get_session()
-    repo = SqlAlchemyRepository()
+    repo = SqlAlchemyRepository(session=session)
 
     add_batch(ref, sku, qty, eta, repo, session)
     return JSONResponse(content="OK", status_code=201)

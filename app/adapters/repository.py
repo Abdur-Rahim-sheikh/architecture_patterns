@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from .models import Batch
+from ..domain.models import Batch
 
 
 class AbstractRepository(ABC):
@@ -29,22 +29,3 @@ class SqlAlchemyRepository(AbstractRepository):
 
     def list(self):
         return self.session.query(Batch).all()
-
-
-class FakeRepository(AbstractRepository):
-    def __init__(self, batches: list[Batch]):
-        self._batches = set(batches)
-
-    @staticmethod
-    def for_batch(ref, sku, qty, eta: None):
-        batch = Batch(ref=ref, sku=sku, qty=qty, eta=eta)
-        return FakeRepository(batches=batch)
-
-    def add(self, batch: Batch):
-        self._batches.add(batch)
-
-    def get(self, reference):
-        return next(b for b in self._batches if b.reference == reference)
-
-    def list(self):
-        return list(self._batches)

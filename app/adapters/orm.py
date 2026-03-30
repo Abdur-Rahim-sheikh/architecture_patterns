@@ -1,7 +1,7 @@
 from sqlalchemy.orm import registry, relationship
 from sqlalchemy import Table, MetaData, Column, Integer, String, Date, ForeignKey
 
-from .models import OrderLine, Batch
+from ..domain.models import OrderLine, Batch
 
 metadata = MetaData()
 mapper_registry = registry()

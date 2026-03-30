@@ -1,14 +1,16 @@
+import time
+from pathlib import Path
 from typing import Generator
 
 import pytest
 import requests
 from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.orm import Session, clear_mappers, sessionmaker
-from pathlib import Path
-from ..config import get_api_url, get_postgres_uri
-from ..orm import metadata, start_mappers
-import time
 from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session, clear_mappers, sessionmaker
+
+from app.adapters.orm import metadata, start_mappers
+
+from ..config import get_api_url, get_postgres_uri
 
 
 @pytest.fixture
