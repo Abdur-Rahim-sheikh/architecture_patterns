@@ -1,7 +1,7 @@
 import pytest
 
-from ..repository import FakeRepository
-from ..service import InvalidSku, add_batch, allocate
+from ...repository import FakeRepository
+from ...service import InvalidSku, add_batch, allocate
 
 
 class FakeSession:

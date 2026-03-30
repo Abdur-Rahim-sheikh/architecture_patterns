@@ -1,8 +1,8 @@
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from ..models import Batch
-from ..repository import SqlAlchemyRepository
-from sqlalchemy import text
+from ...models import Batch
+from ...repository import SqlAlchemyRepository
 
 
 def test_repository_can_save_a_batch(session: Session):
