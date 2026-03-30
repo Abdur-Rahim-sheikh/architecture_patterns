@@ -1,6 +1,7 @@
 from .models import Batch
 from .models import allocate as model_allocate
 from .repository import AbstractRepository
+from datetime import date
 
 
 class InvalidSku(Exception):
@@ -33,3 +34,10 @@ def allocate(
     batchref = model_allocate(orderid=orderid, sku=sku, qty=qty, batches=batches)
     session.commit()
     return batchref
+
+
+def add_batch(
+    ref: str, sku: str, qty: int, eta: date | None, repo: AbstractRepository, session
+):
+    repo.add(Batch(ref, sku, qty, eta))
+    session.commit()
