@@ -6,10 +6,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .adapters.orm import start_mappers
-from .adapters.repository import SqlAlchemyRepository
 from .config import get_postgres_uri
 from .domain.models import Batch
 from .service_layer.service import add_batch, allocate
+from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
 
 start_mappers()
 get_session = sessionmaker(bind=create_engine(get_postgres_uri()))
@@ -24,11 +24,9 @@ def is_valid_sku(sku, batches: list[Batch]):
 async def allocate_endpoint(
     orderid: str = Body(...), sku: str = Body(...), qty: int = Body(...)
 ):
-    session = get_session()
-    repo = SqlAlchemyRepository(session)
-
+    uow = SqlAlchemyUnitOfWork()
     try:
-        batchref = allocate(orderid, sku, qty, repo=repo, session=session)
+        batchref = allocate(orderid, sku, qty, uow)
     except Exception as e:
         # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
@@ -42,8 +40,6 @@ def add_batch_endpoint(
     qty: int = Body(...),
     eta: datetime.date | None = Body(None),
 ):
-    session = get_session()
-    repo = SqlAlchemyRepository(session=session)
-
-    add_batch(ref, sku, qty, eta, repo, session)
+    uow = SqlAlchemyUnitOfWork()
+    add_batch(ref, sku, qty, eta, uow)
     return JSONResponse(content="OK", status_code=201)
