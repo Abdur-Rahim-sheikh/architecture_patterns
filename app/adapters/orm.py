@@ -53,5 +53,8 @@ def start_mappers():
     )
 
     mapper_registry.map_imperatively(
-        Product, products, properties={"batches": relationship(batches_mapper)}
+        Product,
+        products,
+        properties={"batches": relationship(batches_mapper)},
+        version_id_col=products.c.version_number,
     )

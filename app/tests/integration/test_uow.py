@@ -12,7 +12,12 @@ from app.service_layer.unit_of_work import SqlAlchemyUnitOfWork
 from ..random_refs import random_batchref, random_orderid, random_sku
 
 
-def insert_batch(session: Session, ref, sku, qty, eta):
+def insert_batch(session: Session, ref, sku, qty, eta, product_version=1):
+    session.execute(
+        text("INSERT INTO products (sku, version_number) VALUES (:sku, :version)"),
+        dict(sku=sku, version=product_version),
+    )
+
     session.execute(
         text(
             "INSERT INTO batches (reference, sku, _purchased_quantity, eta)"
@@ -42,12 +47,12 @@ def test_uow_can_retrieve_a_batch_and_allocate_to_it(session_factory):
     insert_batch(session, "batch1", "HIPSTER-WORKBENCH", 100, None)
     session.commit()
 
-    uow = SqlAlchemyUnitOfWork(session_factory)  # (1)
+    uow = SqlAlchemyUnitOfWork(session_factory)
     with uow:
-        batch = uow.products.get(sku="batch1")  # (2)
+        batch = uow.products.get(sku="HIPSTER-WORKBENCH")
         line = OrderLine("o1", "HIPSTER-WORKBENCH", 10)
         batch.allocate(line)
-        uow.commit()  # (3)
+        uow.commit()
 
     batchref = get_allocated_batch_ref(session, "o1", "HIPSTER-WORKBENCH")
     assert batchref == "batch1"
@@ -78,7 +83,7 @@ def test_rolls_back_on_error(session_factory):
     assert rows == []
 
 
-def try_to_allocate(orderid, sku, exceptions):
+def try_to_allocate(orderid, sku, exceptions: list):
     line = OrderLine(orderid, sku, 10)
     try:
         with SqlAlchemyUnitOfWork() as uow:

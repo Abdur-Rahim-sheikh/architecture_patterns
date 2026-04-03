@@ -14,23 +14,16 @@ class AbstractRepository(ABC):
     def get(self, sku) -> Batch:
         raise NotImplementedError
 
-    @abstractmethod
-    def list(self):
-        raise NotImplementedError
-
 
 class SqlAlchemyRepository(AbstractRepository):
     def __init__(self, session: Session):
         self.session = session
 
-    def add(self, batch):
-        self.session.add(batch)
+    def add(self, product: Product):
+        self.session.add(product)
 
     def get(self, sku):
-        return self.session.query(Batch).filter_by(sku=sku).one()
-
-    def list(self):
-        return self.session.query(Batch).all()
+        return self.session.query(Product).filter_by(sku=sku).first()
 
 
 class AbstractProductRepository(ABC):
