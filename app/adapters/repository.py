@@ -2,35 +2,39 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy.orm import Session
 
-from ..domain.models import Batch, Product
+from ..domain.models import Product
 
 
 class AbstractRepository(ABC):
+    def __init__(self):
+        self.seen: set[Product] = set()
+
+    def add(self, product: Product):
+        self._add(product)
+        self.seen.add(product)
+
+    def get(self, sku: str) -> Product:
+        product = self._get(sku)
+        if product:
+            self.seen.add(product)
+        return product
+
     @abstractmethod
-    def add(self, batch: Batch):
+    def _add(self, product: Product):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, sku) -> Batch:
+    def _get(self, sku) -> Product:
         raise NotImplementedError
 
 
 class SqlAlchemyRepository(AbstractRepository):
     def __init__(self, session: Session):
+        super().__init__()
         self.session = session
 
-    def add(self, product: Product):
+    def _add(self, product: Product):
         self.session.add(product)
 
-    def get(self, sku):
+    def _get(self, sku):
         return self.session.query(Product).filter_by(sku=sku).first()
-
-
-class AbstractProductRepository(ABC):
-    @abstractmethod
-    def add(self, product: Product):
-        raise NotImplementedError
-
-    @abstractmethod
-    def get(self, sku) -> Product:
-        raise NotImplementedError

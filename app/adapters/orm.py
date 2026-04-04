@@ -1,6 +1,5 @@
 from sqlalchemy.orm import registry, relationship
-from sqlalchemy import Table, MetaData, Column, Integer, String, Date, ForeignKey
-
+from sqlalchemy import Table, MetaData, Column, Integer, String, Date, ForeignKey, event
 from ..domain.models import OrderLine, Batch, Product
 
 metadata = MetaData()
@@ -58,3 +57,8 @@ def start_mappers():
         properties={"batches": relationship(batches_mapper)},
         version_id_col=products.c.version_number,
     )
+
+
+@event.listens_for(Product, "load")
+def receive_load(product: Product, _):
+    product.events = []
