@@ -3,7 +3,7 @@ from unittest import mock
 import pytest
 
 from app.adapters.repository import AbstractRepository
-from app.service_layer.service import InvalidSku, add_batch, allocate
+from app.service_layer.handlers import InvalidSku, add_batch, allocate
 from app.service_layer.unit_of_work import AbstractUnitOfWork
 
 

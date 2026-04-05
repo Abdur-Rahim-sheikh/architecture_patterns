@@ -7,8 +7,10 @@ from sqlalchemy.orm import sessionmaker
 
 from .adapters.orm import start_mappers
 from .config import get_postgres_uri
+from .domain.events import AllocationRequired
 from .domain.models import Batch
-from .service_layer.service import add_batch, allocate
+from .service_layer import messagebus
+from .service_layer.handlers import add_batch
 from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
 
 start_mappers()
@@ -26,7 +28,9 @@ async def allocate_endpoint(
 ):
     uow = SqlAlchemyUnitOfWork()
     try:
-        batchref = allocate(orderid, sku, qty, uow)
+        event = AllocationRequired(orderid, sku, qty)
+        results = messagebus.handle(event, uow=uow)
+        batchref = results[0]
     except Exception as e:
         # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
