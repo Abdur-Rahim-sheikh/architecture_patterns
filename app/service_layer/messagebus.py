@@ -1,7 +1,14 @@
 from ..adapters import email
-from ..domain.events import Event, OutOfStock
+from ..domain.events import (
+    Event,
+    OutOfStock,
+    BatchCreated,
+    BatchQuantityChanged,
+    AllocationRequired,
+)
 from .unit_of_work import AbstractUnitOfWork
 from queue import Queue
+from . import handlers
 
 
 def handle(event: Event, uow: AbstractUnitOfWork) -> list:
@@ -24,4 +31,9 @@ def send_out_of_stock_notification(event: OutOfStock):
     # print(f"Out of stock mail sent for {event.sku}")
 
 
-HANDLERS = {OutOfStock: [send_out_of_stock_notification]}
+HANDLERS = {
+    OutOfStock: [send_out_of_stock_notification],
+    BatchCreated: [handlers.add_batch],
+    BatchQuantityChanged: [handlers.change_batch_quantity],
+    AllocationRequired: [handlers.allocate],
+}

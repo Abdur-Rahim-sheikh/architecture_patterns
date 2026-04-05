@@ -1,4 +1,9 @@
-from ..domain.events import AllocationRequired, BatchCreated, OutOfStock
+from ..domain.events import (
+    AllocationRequired,
+    BatchCreated,
+    OutOfStock,
+    BatchQuantityChanged,
+)
 from ..domain.models import Batch, OrderLine, Product
 from .unit_of_work import AbstractUnitOfWork
 from ..adapters import email
@@ -41,3 +46,13 @@ def add_batch(event: BatchCreated, uow: AbstractUnitOfWork):
 
 def send_out_of_stock_notification(event: OutOfStock, uow: AbstractUnitOfWork):
     email.send_mail("stock@made.com", f"Out of stock for {event.sku}")
+
+
+def change_batch_quantity(
+    event: BatchQuantityChanged,
+    uow: AbstractUnitOfWork,
+):
+    with uow:
+        product = uow.products.get_by_batchref(batchref=event.ref)
+        product.change_batch_quantity(ref=event.ref, qty=event.qty)
+        uow.commit()

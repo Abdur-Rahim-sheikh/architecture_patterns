@@ -2,40 +2,9 @@ from unittest import mock
 
 import pytest
 
-from app.adapters.repository import AbstractRepository
 from app.service_layer.handlers import InvalidSku, add_batch, allocate
-from app.service_layer.unit_of_work import AbstractUnitOfWork
 
-
-class FakeUnitOfWork(AbstractUnitOfWork):
-    def __init__(self):
-        self.products = FakeRepository([])
-        self.committed = False
-
-    def _commit(self):
-        self.committed = True
-
-    def rollback(self):
-        pass
-
-
-class FakeRepository(AbstractRepository):
-    def __init__(self, products):
-        super().__init__()
-        self._products = set(products)
-
-    def _add(self, batch):
-        self._products.add(batch)
-
-    def _get(self, sku):
-        return next((b for b in self._products if b.sku == sku), None)
-
-
-class FakeSession:
-    committed = False
-
-    def commit(self):
-        self.committed = True
+from ..fakes import FakeUnitOfWork
 
 
 def test_add_batch():
