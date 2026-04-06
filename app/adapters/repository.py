@@ -21,7 +21,7 @@ class AbstractRepository(ABC):
         return product
 
     def get_by_batchref(self, batchref: str) -> Product:
-        product = self._get_bybatchref(batchref)
+        product = self._get_by_batchref(batchref)
         if product:
             self.seen.add(product)
         return product

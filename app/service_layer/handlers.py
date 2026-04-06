@@ -39,13 +39,13 @@ def add_batch(event: BatchCreated, uow: AbstractUnitOfWork):
             product = Product(event.sku, batches=[])
             uow.products.add(product)
         product.batches.append(
-            Batch(ref=event.ref, sku=event.sku, qty=event.sku, eta=event.eta)
+            Batch(ref=event.ref, sku=event.sku, qty=event.qty, eta=event.eta)
         )
         uow.commit()
 
 
 def send_out_of_stock_notification(event: OutOfStock, uow: AbstractUnitOfWork):
-    email.send_mail("stock@made.com", f"Out of stock for {event.sku}")
+    email.send("stock@made.com", f"Out of stock for {event.sku}")
 
 
 def change_batch_quantity(

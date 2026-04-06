@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from .adapters.orm import start_mappers
 from .config import get_postgres_uri
-from .domain.events import AllocationRequired
+from .domain.events import AllocationRequired, BatchCreated
 from .domain.models import Batch
 from .service_layer import messagebus
 from .service_layer.handlers import add_batch
@@ -45,5 +45,6 @@ def add_batch_endpoint(
     eta: datetime.date | None = Body(None),
 ):
     uow = SqlAlchemyUnitOfWork()
-    add_batch(ref, sku, qty, eta, uow)
+    event = BatchCreated(ref, sku, qty, eta)
+    add_batch(event, uow)
     return JSONResponse(content="OK", status_code=201)
