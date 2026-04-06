@@ -15,10 +15,10 @@ def handle(event: Event, uow: AbstractUnitOfWork) -> list:
     q = Queue()
     q.put(event)
     results = []
-    print(f"A new event poked, by {event=}")
+
     while not q.empty():
         event = q.get()
-        print(f"{event=}")
+
         for handler in HANDLERS[type(event)]:
             result = handler(event, uow=uow)
             results.append(result)
