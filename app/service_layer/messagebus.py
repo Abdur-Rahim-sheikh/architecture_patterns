@@ -2,10 +2,7 @@ import logging
 from queue import Queue
 
 from ..domain.commands import Allocate, ChangeBatchQuantity, Command, CreateBatch
-from ..domain.events import (
-    Event,
-    OutOfStock,
-)
+from ..domain.events import Event, OutOfStock, Allocated
 from . import handlers
 from .unit_of_work import AbstractUnitOfWork
 from tenacity import Retrying, RetryError, stop_after_attempt, wait_exponential
@@ -71,6 +68,7 @@ def handle_command(
 
 EVENT_HANDLERS = {
     OutOfStock: [handlers.send_out_of_stock_notification],
+    Allocated: [handlers.publish_allocated_event],
 }
 COMMAND_HANDLERS = {
     CreateBatch: handlers.add_batch,

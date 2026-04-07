@@ -1,6 +1,6 @@
 from datetime import date
 from dataclasses import dataclass
-from .events import OutOfStock
+from .events import OutOfStock, Allocated
 from .commands import Allocate
 
 
@@ -72,6 +72,14 @@ class Product:
             batch = next(b for b in sorted(self.batches) if b.can_allocate(line))
             batch.allocate(line)
             self.version_number += 1
+            self.events.append(
+                Allocated(
+                    orderid=line.orderid,
+                    sku=line.sku,
+                    qty=line.qty,
+                    batchref=batch.reference,
+                )
+            )
             return batch.reference
         except StopIteration:
             self.events.append(OutOfStock(line.sku))

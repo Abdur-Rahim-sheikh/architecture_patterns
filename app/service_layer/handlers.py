@@ -1,8 +1,9 @@
-from ..domain.events import OutOfStock
+from ..domain.events import OutOfStock, Allocated
 from ..domain.commands import Allocate, CreateBatch, ChangeBatchQuantity
 from ..domain.models import Batch, OrderLine, Product
 from .unit_of_work import AbstractUnitOfWork
 from ..adapters import email
+from app import redis_eventconsumer
 
 
 class InvalidSku(Exception):
@@ -52,3 +53,7 @@ def change_batch_quantity(
         product = uow.products.get_by_batchref(batchref=message.ref)
         product.change_batch_quantity(ref=message.ref, qty=message.qty)
         uow.commit()
+
+
+def publish_allocated_event(event: Allocated, uow: AbstractUnitOfWork):
+    redis_eventconsumer.publish("line_allocated", event)
