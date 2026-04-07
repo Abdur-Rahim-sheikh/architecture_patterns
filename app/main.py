@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker
 
 from .adapters.orm import start_mappers
 from .config import get_postgres_uri
-from .domain.events import AllocationRequired, BatchCreated
+from .domain.commands import CreateBatch, Allocate
 from .domain.models import Batch
 from .service_layer import messagebus
 from .service_layer.handlers import add_batch
@@ -28,8 +28,8 @@ async def allocate_endpoint(
 ):
     uow = SqlAlchemyUnitOfWork()
     try:
-        event = AllocationRequired(orderid, sku, qty)
-        results = messagebus.handle(event, uow=uow)
+        message = Allocate(orderid, sku, qty)
+        results = messagebus.handle(message, uow=uow)
         batchref = results[0]
     except Exception as e:
         # return JSONResponse(content={"message": str(e)}, status_code=400)
@@ -45,6 +45,6 @@ def add_batch_endpoint(
     eta: datetime.date | None = Body(None),
 ):
     uow = SqlAlchemyUnitOfWork()
-    event = BatchCreated(ref, sku, qty, eta)
-    add_batch(event, uow)
+    message = CreateBatch(ref, sku, qty, eta)
+    add_batch(message, uow)
     return JSONResponse(content="OK", status_code=201)

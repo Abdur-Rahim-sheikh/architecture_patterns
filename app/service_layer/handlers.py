@@ -1,9 +1,5 @@
-from ..domain.events import (
-    AllocationRequired,
-    BatchCreated,
-    OutOfStock,
-    BatchQuantityChanged,
-)
+from ..domain.events import OutOfStock
+from ..domain.commands import Allocate, CreateBatch, ChangeBatchQuantity
 from ..domain.models import Batch, OrderLine, Product
 from .unit_of_work import AbstractUnitOfWork
 from ..adapters import email
@@ -18,10 +14,10 @@ def is_valid_sku(sku, batches: list[Batch]):
 
 
 def allocate(
-    event: AllocationRequired,
+    message: Allocate,
     uow: AbstractUnitOfWork,
 ) -> str:
-    line = OrderLine(event.orderid, event.sku, event.qty)
+    line = OrderLine(message.orderid, message.sku, message.qty)
     with uow:
         product = uow.products.get(sku=line.sku)
         if product is None:
@@ -31,15 +27,15 @@ def allocate(
     return batchref
 
 
-def add_batch(event: BatchCreated, uow: AbstractUnitOfWork):
+def add_batch(message: CreateBatch, uow: AbstractUnitOfWork):
 
     with uow:
-        product = uow.products.get(sku=event.sku)
+        product = uow.products.get(sku=message.sku)
         if product is None:
-            product = Product(event.sku, batches=[])
+            product = Product(message.sku, batches=[])
             uow.products.add(product)
         product.batches.append(
-            Batch(ref=event.ref, sku=event.sku, qty=event.qty, eta=event.eta)
+            Batch(ref=message.ref, sku=message.sku, qty=message.qty, eta=message.eta)
         )
         uow.commit()
 
@@ -49,10 +45,10 @@ def send_out_of_stock_notification(event: OutOfStock, uow: AbstractUnitOfWork):
 
 
 def change_batch_quantity(
-    event: BatchQuantityChanged,
+    message: ChangeBatchQuantity,
     uow: AbstractUnitOfWork,
 ):
     with uow:
-        product = uow.products.get_by_batchref(batchref=event.ref)
-        product.change_batch_quantity(ref=event.ref, qty=event.qty)
+        product = uow.products.get_by_batchref(batchref=message.ref)
+        product.change_batch_quantity(ref=message.ref, qty=message.qty)
         uow.commit()

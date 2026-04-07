@@ -1,6 +1,7 @@
 from datetime import date
 from dataclasses import dataclass
-from .events import OutOfStock, AllocationRequired
+from .events import OutOfStock
+from .commands import Allocate
 
 
 @dataclass(unsafe_hash=True)
@@ -82,4 +83,4 @@ class Product:
         batch._purchased_quantity = qty
         while batch.available_quantity < 0:
             line = batch.deallocate_one()
-            self.events.append(AllocationRequired(line.orderid, line.sku, line.qty))
+            self.events.append(Allocate(line.orderid, line.sku, line.qty))
