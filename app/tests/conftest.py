@@ -3,14 +3,15 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
+import redis
 import requests
-from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, clear_mappers, sessionmaker
+from tenacity import retry, stop_after_delay
 
 from app.adapters.orm import metadata, start_mappers
 
-from ..config import get_api_url, get_postgres_uri
+from ..config import get_api_url, get_postgres_uri, get_redis_host_and_port
 
 
 @pytest.fixture
@@ -34,25 +35,20 @@ def session(in_memory_db) -> Generator[Session, None, None]:
     clear_mappers()
 
 
+@retry(stop=stop_after_delay(10))
 def wait_for_postgres_to_come_up(engine: Engine):
-    deadline = time.time() + 10
-    while time.time() < deadline:
-        try:
-            return engine.connect()
-        except OperationalError:
-            time.sleep(0.5)
-    pytest.fail("Postgres never came up")
+    return engine.connect()
 
 
+@retry(stop=stop_after_delay(10))
 def wait_for_webapp_to_come_up():
-    deadline = time.time() + 10
-    url = get_api_url()
-    while time.time() < deadline:
-        try:
-            return requests.get(url)
-        except ConnectionError:
-            time.sleep(0.5)
-    pytest.fail("API never came up")
+    return requests.get(get_api_url())
+
+
+@retry(stop=stop_after_delay(10))
+def wait_for_redis_to_come_up():
+    r = redis.Redis(**get_redis_host_and_port())
+    return r.ping()
 
 
 @pytest.fixture(scope="session")
@@ -86,41 +82,13 @@ def restart_api():
 
 
 @pytest.fixture
-def add_stock(postgres_session: Session):
-    batches_added = set()
-    skus_added = set()
+def restart_redis_pubsub():
+    wait_for_redis_to_come_up()
+    import shutil
+    import subprocess
 
-    def _add_stock(lines):
-        for ref, sku, qty, eta in lines:
-            postgres_session.execute(
-                text(
-                    "INSERT INTO batches (reference, sku, _purchased_quantity, eta)"
-                    " VALUES (:ref, :sku, :qty, :eta)"
-                ),
-                dict(ref=ref, sku=sku, qty=qty, eta=eta),
-            )
-            [[batch_id]] = postgres_session.execute(
-                text("SELECT id FROM batches WHERE reference=:ref AND sku=:sku"),
-                dict(ref=ref, sku=sku),
-            )
-            batches_added.add(batch_id)
-            skus_added.add(sku)
-        postgres_session.commit()
+    if not shutil.which("docker compose"):
+        print("skipping restart, assumes running in container")
+        return
 
-    yield _add_stock
-
-    for batch_id in batches_added:
-        postgres_session.execute(
-            text("DELETE FROM allocations WHERE batch_id=:batch_id"),
-            dict(batch_id=batch_id),
-        )
-        postgres_session.execute(
-            text("DELETE FROM batches WHERE id=:batch_id"),
-            dict(batch_id=batch_id),
-        )
-    for sku in skus_added:
-        postgres_session.execute(
-            text("DELETE FROM order_lines WHERE sku=:sku"),
-            dict(sku=sku),
-        )
-        postgres_session.commit()
+    subprocess.run(["docker", "compose", "restart", "-t", "0", "redis_pubsub"])

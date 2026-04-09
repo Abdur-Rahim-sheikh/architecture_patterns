@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from sqlalchemy.orm import Session
-from sqlalchemy import orm
+from . import orm
 
 from ..domain.models import Product, Batch
 

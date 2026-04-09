@@ -2,16 +2,19 @@ import os
 
 
 def get_api_url() -> str:
-    return "http://localhost:8000"
+    host = os.environ.get("API_HOST", "localhost")
+    port = 8000
+    return f"http://{host}:{port}"
 
 
 def get_postgres_uri():
-    # postgres is the default database
-    # it automatically creates as the user_name
-    return "postgresql://postgres:secret@localhost:5432/postgres"
+    password = os.environ.get("POSTGRES_PASSWORD", "secret")
+    host = "postgres"
+    port = 5432
+    return f"postgresql://postgres:{password}@{host}:{port}/postgres"
 
 
 def get_redis_host_and_port():
-    host = os.environ.get("REDIS_HOST", "localhost")
-    port = 63791 if host == "localhost" else 6379
+    host = os.environ.get("REDIS_HOST", "redis")
+    port = 6379
     return {"host": host, "port": port}

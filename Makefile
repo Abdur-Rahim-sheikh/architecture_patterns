@@ -1,6 +1,5 @@
 test:
-	pytest --tb=short
+	docker compose exec api /bin/bash -c "source .venv/bin/activate && pytest ."
 
-watch-tests:
-	ls *.py | entr pytest --tb=short
-
+start: 
+	docker compose up --watch

@@ -5,7 +5,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from .adapters.orm import start_mappers
+from .adapters.orm import start_mappers, metadata
 from .config import get_postgres_uri
 from .domain.commands import CreateBatch, Allocate
 from .domain.models import Batch
@@ -14,7 +14,7 @@ from .service_layer.handlers import add_batch
 from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
 
 start_mappers()
-get_session = sessionmaker(bind=create_engine(get_postgres_uri()))
+metadata.create_all(bind=create_engine(get_postgres_uri()))
 app = FastAPI(debug=True)
 
 

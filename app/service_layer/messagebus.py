@@ -1,11 +1,11 @@
 import logging
 from queue import Queue
 
+
 from ..domain.commands import Allocate, ChangeBatchQuantity, Command, CreateBatch
-from ..domain.events import Event, OutOfStock, Allocated
+from ..domain.events import Allocated, Event, OutOfStock
 from . import handlers
 from .unit_of_work import AbstractUnitOfWork
-from tenacity import Retrying, RetryError, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -19,6 +19,8 @@ def handle(message: Message, uow: AbstractUnitOfWork) -> list:
 
     while not q.empty():
         message = q.get()
+        logger.debug(f"{type(message)=}, {isinstance(message, Event)=}")
+        print(f"{type(message)=}, {isinstance(message, Event)=}")
         if isinstance(message, Event):
             handle_event(message, q, uow)
         elif isinstance(message, Command):
@@ -34,17 +36,13 @@ def handle(message: Message, uow: AbstractUnitOfWork) -> list:
 def handle_event(event: Event, queue: Queue[Message], uow: AbstractUnitOfWork):
     for handler in EVENT_HANDLERS[type(event)]:
         try:
-            for attepmt in Retrying(
-                stop=stop_after_attempt(3), wait=wait_exponential()
-            ):
-                with attepmt:
-                    handler(event, uow=uow)
+            result = handler(event, uow=uow)
 
-                    for new_event in uow.collect_new_events():
-                        queue.put(new_event)
-        except RetryError as retry_failure:
-            n = retry_failure.last_attempt.attempt_number
-            logger.error(f"Failed to handle event {n} times, giving up!")
+            for new_event in uow.collect_new_events():
+                queue.put(new_event)
+            return result
+        except Exception:
+            logger.exception("Failed to handle event!")
             continue
 
 

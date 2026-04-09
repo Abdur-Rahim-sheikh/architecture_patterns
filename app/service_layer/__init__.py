@@ -1,4 +1,3 @@
-from .unit_of_work import AbstractUnitOfWork, SqlAlchemyRepository
+from .unit_of_work import AbstractUnitOfWork, SqlAlchemyUnitOfWork
 
-
-__all__ = ["AbstractUnitOfWork", "SqlAlchemyRepository"]
+__all__ = ["AbstractUnitOfWork", "SqlAlchemyUnitOfWork"]

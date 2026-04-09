@@ -1,7 +1,55 @@
 services:
-  db:
+  postgres:
     image: postgres:15.17
     ports:
-      - 5432:5432
+      - 54321:5432
     environment:
       POSTGRES_PASSWORD: secret
+
+  redis_pubsub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: allocation-image
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+          initial_sync: true
+
+    depends_on:
+      - postgres
+      - redis
+
+    entrypoint:
+      - uv
+      - run
+      - python
+      - -m
+      - app.redis_eventconsumer
+
+  api:
+    image: allocation-image
+    depends_on:
+      - redis_pubsub
+    develop:
+      watch:
+        - action: sync
+          path: ./app
+          target: /app/app
+          initial_sync: true
+    entrypoint:
+      - uv
+      - run
+      - fastapi
+      - dev
+      - --host=0.0.0.0
+      - --port=8000
+    ports:
+      - "5005:8000"
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "63791:6379"
