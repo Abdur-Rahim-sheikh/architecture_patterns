@@ -19,8 +19,7 @@ def handle(message: Message, uow: AbstractUnitOfWork) -> list:
 
     while not q.empty():
         message = q.get()
-        logger.debug(f"{type(message)=}, {isinstance(message, Event)=}")
-        print(f"{type(message)=}, {isinstance(message, Event)=}")
+
         if isinstance(message, Event):
             handle_event(message, q, uow)
         elif isinstance(message, Command):
@@ -35,12 +34,14 @@ def handle(message: Message, uow: AbstractUnitOfWork) -> list:
 
 def handle_event(event: Event, queue: Queue[Message], uow: AbstractUnitOfWork):
     for handler in EVENT_HANDLERS[type(event)]:
+        logger.debug(f"{queue.queue=}, {handler=}, {isinstance(event, Event)=}")
+
         try:
-            result = handler(event, uow=uow)
+            handler(event, uow=uow)
 
             for new_event in uow.collect_new_events():
                 queue.put(new_event)
-            return result
+
         except Exception:
             logger.exception("Failed to handle event!")
             continue
@@ -51,7 +52,7 @@ def handle_command(
     queue: Queue[Message],
     uow: AbstractUnitOfWork,
 ):
-    logger.debug("handling command %s", command)
+
     try:
         handler = COMMAND_HANDLERS[type(command)]
         result = handler(command, uow=uow)

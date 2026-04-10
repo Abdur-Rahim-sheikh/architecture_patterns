@@ -65,6 +65,12 @@ def postgres_db():
 
 
 @pytest.fixture
+def clean_redis():
+    r = redis.Redis(**get_redis_host_and_port())
+    r.flushdb()
+
+
+@pytest.fixture
 def postgres_session_factory(postgres_db):
     start_mappers()
     yield sessionmaker(bind=postgres_db)

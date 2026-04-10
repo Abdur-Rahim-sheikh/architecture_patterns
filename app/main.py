@@ -4,6 +4,7 @@ from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
 
+from . import views
 from .adapters.orm import metadata, start_mappers
 from .config import get_postgres_uri
 from .domain.commands import Allocate, CreateBatch
@@ -11,7 +12,6 @@ from .domain.models import Batch
 from .service_layer import messagebus
 from .service_layer.handlers import add_batch
 from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
-from . import views
 
 start_mappers()
 metadata.create_all(bind=create_engine(get_postgres_uri()))
@@ -29,12 +29,12 @@ async def allocate_endpoint(
     uow = SqlAlchemyUnitOfWork()
     try:
         message = Allocate(orderid, sku, qty)
-        results = messagebus.handle(message, uow=uow)
-        batchref = results[0]
+        messagebus.handle(message, uow=uow)
+
     except Exception as e:
         # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
-    return JSONResponse(status_code=202, content={"batchref": batchref})
+    return JSONResponse(status_code=202, content="ok")
 
 
 @app.get("/allocations")
