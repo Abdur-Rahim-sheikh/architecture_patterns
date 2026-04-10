@@ -17,7 +17,11 @@ def test_allocations_view(sqlite_session_factory):
     messagebus.handle(commands.Allocate("otherorder", "sku1", 30), uow)
     messagebus.handle(commands.Allocate("otherorder", "sku2", 10), uow)
 
-    assert views.allocations("order1", uow) == [
+    # assert views.allocations("order1", uow) == [
+    #     {"sku": "sku1", "batchref": "sku1batch"},
+    #     {"sku": "sku2", "batchref": "sku2batch"},
+    # ]
+    assert views.allocations("order1") == [
         {"sku": "sku1", "batchref": "sku1batch"},
         {"sku": "sku2", "batchref": "sku2batch"},
     ]

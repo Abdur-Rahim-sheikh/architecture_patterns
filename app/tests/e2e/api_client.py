@@ -20,4 +20,4 @@ def post_to_allocate(orderid, sku, qty) -> requests.Response:
 
 
 def get_allocation(orderid):
-    return requests.get(f"{url}/allocate?orderid={orderid}")
+    return requests.get(f"{url}/allocations?orderid={orderid}")

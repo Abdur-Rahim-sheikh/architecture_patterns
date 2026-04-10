@@ -34,13 +34,13 @@ async def allocate_endpoint(
     except Exception as e:
         # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
-    return JSONResponse(status_code=201, content={"batchref": batchref})
+    return JSONResponse(status_code=202, content={"batchref": batchref})
 
 
 @app.get("/allocations")
 def allocations_view_endpoint(orderid: str):
-    uow = SqlAlchemyUnitOfWork()
-    result = views.allocation(orderid, uow)
+    # uow = SqlAlchemyUnitOfWork()
+    result = views.allocations(orderid)
 
     if not result:
         raise HTTPException(status_code=404, detail="orderid not found")
