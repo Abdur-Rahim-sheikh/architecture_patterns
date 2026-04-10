@@ -17,3 +17,7 @@ def post_to_add_batch(ref, sku, qty, eta):
 def post_to_allocate(orderid, sku, qty) -> requests.Response:
     data = {"orderid": orderid, "sku": sku, "qty": qty}
     return requests.post(f"{url}/allocate", json=data, timeout=5)
+
+
+def get_allocation(orderid):
+    return requests.get(f"{url}/allocate?orderid={orderid}")

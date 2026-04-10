@@ -3,15 +3,15 @@ import datetime
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
-from .adapters.orm import start_mappers, metadata
+from .adapters.orm import metadata, start_mappers
 from .config import get_postgres_uri
-from .domain.commands import CreateBatch, Allocate
+from .domain.commands import Allocate, CreateBatch
 from .domain.models import Batch
 from .service_layer import messagebus
 from .service_layer.handlers import add_batch
 from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
+from . import views
 
 start_mappers()
 metadata.create_all(bind=create_engine(get_postgres_uri()))
@@ -35,6 +35,17 @@ async def allocate_endpoint(
         # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse(status_code=201, content={"batchref": batchref})
+
+
+@app.get("/allocations")
+def allocations_view_endpoint(orderid: str):
+    uow = SqlAlchemyUnitOfWork()
+    result = views.allocation(orderid, uow)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="orderid not found")
+
+    return JSONResponse(content=result)
 
 
 @app.post("/add_batch")

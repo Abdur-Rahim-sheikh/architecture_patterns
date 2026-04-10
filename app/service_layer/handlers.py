@@ -1,4 +1,4 @@
-from ..domain.events import OutOfStock, Allocated
+from ..domain.events import OutOfStock, Allocated, Deallocated
 from ..domain.commands import Allocate, CreateBatch, ChangeBatchQuantity
 from ..domain.models import Batch, OrderLine, Product
 from .unit_of_work import AbstractUnitOfWork
@@ -28,6 +28,15 @@ def allocate(
     return batchref
 
 
+def reallocate(event: Deallocated, uow: AbstractUnitOfWork):
+    with uow:
+        product = uow.products.get(sku=event.sku)
+
+        product.events.append(
+            Allocate(orderid=event.orderid, sku=event.sku, qty=event.sku)
+        )
+
+
 def add_batch(message: CreateBatch, uow: AbstractUnitOfWork):
 
     with uow:
@@ -53,6 +62,14 @@ def change_batch_quantity(
         product = uow.products.get_by_batchref(batchref=message.ref)
         product.change_batch_quantity(ref=message.ref, qty=message.qty)
         uow.commit()
+
+
+def add_allocation_to_read_model(event: Allocated, uow: AbstractUnitOfWork):
+    redis_eventpublisher.update_readmodel(event.orderid, event.sku, event.batchref)
+
+
+def remove_allocation_from_read_model(event: Allocated, uow: AbstractUnitOfWork):
+    redis_eventpublisher.update_readmodel(event.orderid, event.sku, event.batchref)
 
 
 def publish_allocated_event(event: Allocated, uow: AbstractUnitOfWork):

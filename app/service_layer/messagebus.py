@@ -3,7 +3,7 @@ from queue import Queue
 
 
 from ..domain.commands import Allocate, ChangeBatchQuantity, Command, CreateBatch
-from ..domain.events import Allocated, Event, OutOfStock
+from ..domain.events import Allocated, Event, OutOfStock, Deallocated
 from . import handlers
 from .unit_of_work import AbstractUnitOfWork
 
@@ -66,7 +66,11 @@ def handle_command(
 
 EVENT_HANDLERS = {
     OutOfStock: [handlers.send_out_of_stock_notification],
-    Allocated: [handlers.publish_allocated_event],
+    Allocated: [
+        handlers.publish_allocated_event,
+        handlers.add_allocation_to_read_model,
+    ],
+    Deallocated: [handlers.remove_allocation_from_read_model, handlers.reallocate],
 }
 COMMAND_HANDLERS = {
     CreateBatch: handlers.add_batch,
