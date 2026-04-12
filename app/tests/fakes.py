@@ -1,6 +1,15 @@
 from app.service_layer.unit_of_work import AbstractUnitOfWork
-from app.adapters.repository import AbstractRepository
+from app.adapters import AbstractRepository, AbstractNotifications
 from app.domain.events import Event
+from collections import defaultdict
+
+
+class FakeNotifications(AbstractNotifications):
+    def __init__(self):
+        self.sent: dict[str, list[str]] = defaultdict(list)
+
+    def send(self, destination, message):
+        self.sent[destination].append(message)
 
 
 class FakeUnitOfWork(AbstractUnitOfWork):

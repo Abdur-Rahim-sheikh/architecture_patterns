@@ -9,8 +9,9 @@ from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, clear_mappers, sessionmaker
 from tenacity import retry, stop_after_delay
 
+from app import bootstrap
 from app.adapters.orm import metadata, start_mappers
-
+from app.service_layer import SqlAlchemyUnitOfWork
 from ..config import get_api_url, get_postgres_uri, get_redis_host_and_port
 
 
@@ -31,6 +32,18 @@ def sqlite_session_factory(in_memory_db):
 @pytest.fixture
 def sqlite_session(sqlite_session_factory):
     return sqlite_session_factory()
+
+
+@pytest.fixture
+def sqlite_bus(sqlite_session_factory):
+    bus = bootstrap.bootstrap(
+        start_orm=False,
+        uow=SqlAlchemyUnitOfWork(sqlite_session_factory),
+        notifications=lambda *args: None,
+        publish=lambda *args: None,
+    )
+    yield bus
+    clear_mappers()
 
 
 @pytest.fixture

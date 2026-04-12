@@ -2,19 +2,13 @@ import datetime
 
 from fastapi import Body, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
-from sqlalchemy import create_engine
 
-from . import views
-from .adapters.orm import metadata, start_mappers
-from .config import get_postgres_uri
+from . import bootstrap, views
 from .domain.commands import Allocate, CreateBatch
 from .domain.models import Batch
-from .service_layer import messagebus
-from .service_layer.handlers import add_batch
-from .service_layer.unit_of_work import SqlAlchemyUnitOfWork
 
-start_mappers()
-metadata.create_all(bind=create_engine(get_postgres_uri()))
+bus = bootstrap.bootstrap()
+# metadata.create_all(bind=create_engine(get_postgres_uri()))
 app = FastAPI(debug=True)
 
 
@@ -26,13 +20,11 @@ def is_valid_sku(sku, batches: list[Batch]):
 async def allocate_endpoint(
     orderid: str = Body(...), sku: str = Body(...), qty: int = Body(...)
 ):
-    uow = SqlAlchemyUnitOfWork()
     try:
         message = Allocate(orderid, sku, qty)
-        messagebus.handle(message, uow=uow)
+        bus.handle(message=message)
 
     except Exception as e:
-        # return JSONResponse(content={"message": str(e)}, status_code=400)
         raise HTTPException(status_code=400, detail=str(e))
     return JSONResponse(status_code=202, content="ok")
 
@@ -55,7 +47,6 @@ def add_batch_endpoint(
     qty: int = Body(...),
     eta: datetime.date | None = Body(None),
 ):
-    uow = SqlAlchemyUnitOfWork()
     message = CreateBatch(ref, sku, qty, eta)
-    add_batch(message, uow)
+    bus.handle(message=message)
     return JSONResponse(content="OK", status_code=201)

@@ -1,9 +1,8 @@
-from ..domain.events import OutOfStock, Allocated, Deallocated
-from ..domain.commands import Allocate, CreateBatch, ChangeBatchQuantity
+from ..adapters import AbstractNotifications, redis_eventpublisher
+from ..domain.commands import Allocate, ChangeBatchQuantity, CreateBatch
+from ..domain.events import Allocated, Deallocated, OutOfStock
 from ..domain.models import Batch, OrderLine, Product
 from .unit_of_work import AbstractUnitOfWork
-from ..adapters import email
-from ..adapters import redis_eventpublisher
 
 
 class InvalidSku(Exception):
@@ -50,8 +49,10 @@ def add_batch(message: CreateBatch, uow: AbstractUnitOfWork):
         uow.commit()
 
 
-def send_out_of_stock_notification(event: OutOfStock, uow: AbstractUnitOfWork):
-    email.send("stock@made.com", f"Out of stock for {event.sku}")
+def send_out_of_stock_notification(
+    event: OutOfStock, notifications: AbstractNotifications
+):
+    notifications.send("stock@made.com", f"Out of stock for {event.sku}")
 
 
 def change_batch_quantity(
@@ -74,3 +75,18 @@ def remove_allocation_from_read_model(event: Allocated, uow: AbstractUnitOfWork)
 
 def publish_allocated_event(event: Allocated, uow: AbstractUnitOfWork):
     redis_eventpublisher.publish("line_allocated", event)
+
+
+EVENT_HANDLERS = {
+    OutOfStock: [send_out_of_stock_notification],
+    Allocated: [
+        publish_allocated_event,
+        add_allocation_to_read_model,
+    ],
+    Deallocated: [remove_allocation_from_read_model, reallocate],
+}
+COMMAND_HANDLERS = {
+    CreateBatch: add_batch,
+    ChangeBatchQuantity: change_batch_quantity,
+    Allocate: allocate,
+}

@@ -1,80 +1,71 @@
 import logging
 from queue import Queue
+from typing import Callable, Type
 
-
-from ..domain.commands import Allocate, ChangeBatchQuantity, Command, CreateBatch
-from ..domain.events import Allocated, Event, OutOfStock, Deallocated
-from . import handlers
+from ..domain.commands import Command
+from ..domain.events import Event
 from .unit_of_work import AbstractUnitOfWork
 
 logger = logging.getLogger(__name__)
+
 logger.setLevel(logging.DEBUG)
 Message = Command | Event
 
 
-def handle(message: Message, uow: AbstractUnitOfWork) -> list:
-    q = Queue()
-    q.put(message)
-    results = []
+class MessageBus:
+    def __init__(
+        self,
+        uow: AbstractUnitOfWork,
+        event_handlers: dict[Type[Event], list[Callable]],
+        command_handlers: dict[Type[Command], Callable],
+    ):
+        self.uow = uow
+        self.event_handlers = event_handlers
+        self.command_handlers = command_handlers
+        # print(f"{self.uow=}, {self.event_handlers=}, {self.command_handlers=}")
 
-    while not q.empty():
-        message = q.get()
+    def handle(self, message: Message) -> list:
+        q = Queue()
+        q.put(message)
+        results = []
 
-        if isinstance(message, Event):
-            handle_event(message, q, uow)
-        elif isinstance(message, Command):
-            result = handle_command(message, q, uow)
-            results.append(result)
+        while not q.empty():
+            message = q.get()
 
-        else:
-            raise Exception(f"{message} was not an Event or Command")
+            if isinstance(message, Event):
+                self.handle_event(message, q)
+            elif isinstance(message, Command):
+                result = self.handle_command(message, q)
+                results.append(result)
 
-    return results
+            else:
+                raise Exception(f"{message} was not an Event or Command")
 
+        return results
 
-def handle_event(event: Event, queue: Queue[Message], uow: AbstractUnitOfWork):
-    for handler in EVENT_HANDLERS[type(event)]:
-        logger.debug(f"{queue.queue=}, {handler=}, {isinstance(event, Event)=}")
+    def handle_event(self, event: Event, queue: Queue[Message]):
+        for handler in self.event_handlers[type(event)]:
+            logger.debug(f"{queue.queue=}, {handler=}, {isinstance(event, Event)=}")
+
+            try:
+                handler(event)
+
+                for new_event in self.uow.collect_new_events():
+                    queue.put(new_event)
+
+            except Exception:
+                logger.exception("Failed to handle event!")
+                continue
+
+    def handle_command(self, command: Command, queue: Queue[Message]):
 
         try:
-            handler(event, uow=uow)
-
-            for new_event in uow.collect_new_events():
+            handler = self.command_handlers[type(command)]
+            result = handler(command)
+            for new_event in self.uow.collect_new_events():
                 queue.put(new_event)
 
+            return result
         except Exception:
-            logger.exception("Failed to handle event!")
-            continue
-
-
-def handle_command(
-    command: Command,
-    queue: Queue[Message],
-    uow: AbstractUnitOfWork,
-):
-
-    try:
-        handler = COMMAND_HANDLERS[type(command)]
-        result = handler(command, uow=uow)
-        for new_event in uow.collect_new_events():
-            queue.put(new_event)
-
-        return result
-    except Exception:
-        logger.exception("Exception handling command %s", command)
-        raise
-
-
-EVENT_HANDLERS = {
-    OutOfStock: [handlers.send_out_of_stock_notification],
-    Allocated: [
-        handlers.publish_allocated_event,
-        handlers.add_allocation_to_read_model,
-    ],
-    Deallocated: [handlers.remove_allocation_from_read_model, handlers.reallocate],
-}
-COMMAND_HANDLERS = {
-    CreateBatch: handlers.add_batch,
-    ChangeBatchQuantity: handlers.change_batch_quantity,
-    Allocate: handlers.allocate,
-}
+            logger.exception("Exception handling command %s", command)
+            raise
